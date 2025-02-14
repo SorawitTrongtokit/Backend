@@ -11,12 +11,12 @@ RUN apt-get update && \
 # กำหนด working directory
 WORKDIR /app
 
-# เปลี่ยน owner ให้ user node ใช้ /app ได้
+# ให้สิทธิ์แก่ไฟล์ใน /app
 RUN chown -R node:node /app
 
 # คัดลอก package.json และติดตั้ง dependencies
 COPY package.json package-lock.json ./
-RUN npm install --production
+RUN npm install --unsafe-perm
 
 # คัดลอกโค้ดทั้งหมด
 COPY . .
