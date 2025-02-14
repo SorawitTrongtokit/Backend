@@ -1,61 +1,63 @@
-# Use Node.js 18 as the base image
+# ใช้ Node.js 18 เป็น base image
 FROM node:18
 
-# Install Python, pip, venv, and required dependencies
+# ใช้สิทธิ์ root เพื่อหลีกเลี่ยงปัญหาสิทธิ์การเข้าถึง
+USER root
+
+# ติดตั้ง Python, pip, venv และ dependencies ที่จำเป็น
 RUN apt-get update && apt-get install -y \
     python3 python3-pip python3-venv \
     build-essential libpq-dev libgl1-mesa-glx \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Set Python3 as the default
+# ตั้งค่า Python เป็นค่าเริ่มต้น
 RUN ln -s /usr/bin/python3 /usr/bin/python
 
-# ✅ Set working directory (creates /app if it doesn't exist)
+# ตั้งค่าโฟลเดอร์ทำงาน
 WORKDIR /app
 
-# ✅ Ensure /app and subdirectories exist before copying files
-RUN mkdir -p /app/scripts /app/models /app/uploads /app/config \
-    && chown -R node:node /app \
-    && chmod -R 755 /app
+# สร้างโฟลเดอร์ที่ต้องใช้
+RUN mkdir -p /app/scripts /app/models /app/uploads /app/config /app/routes /app/services /app/utils /app/logs
 
-# ✅ Copy package files and install dependencies using npm ci
-COPY package.json package-lock.json /app/
-WORKDIR /app
-RUN npm ci --production
+# ให้สิทธิ์ root และทำให้ทุกไฟล์สามารถเข้าถึงได้
+RUN chown -R root:root /app && chmod -R 777 /app
 
-# ✅ Copy required files before COPY . . (for better caching)
-COPY config/db.js config/config.js /app/config/
-COPY scripts/detect.py /app/scripts/
-COPY models/best.pt /app/models/
+# ตั้งค่า npm ให้ทำงานได้แม้ไม่มีสิทธิ์ root
+RUN npm config set unsafe-perm true
+
+# คัดลอกไฟล์ package.json และติดตั้ง dependencies
+COPY package.json package-lock.json ./
+RUN npm install --production
+
+# คัดลอกไฟล์ที่จำเป็น
+COPY config/ /app/config/
+COPY models/ /app/models/
+COPY routes/ /app/routes/
+COPY scripts/ /app/scripts/
+COPY services/ /app/services/
+COPY utils/ /app/utils/
+COPY uploads/ /app/uploads/
+COPY logs/ /app/logs/
+COPY server.js /app/
 COPY requirements.txt /app/
+COPY .env /app/
 
-# ✅ Debugging: Check if /app exists after COPY
-RUN ls -lah /app || echo "❌ /app NOT FOUND AFTER COPY!"
+# ตรวจสอบว่าไฟล์ถูกคัดลอกแล้ว
+RUN ls -lah /app || echo "❌ /app NOT FOUND!"
 RUN ls -lah /app/scripts/ || echo "❌ /app/scripts/ NOT FOUND!"
 RUN ls -lah /app/models/ || echo "❌ /app/models/ NOT FOUND!"
 
-# ✅ Copy the rest of the app
-COPY . /app
+# สร้าง Python Virtual Environment และติดตั้ง dependencies
+RUN python3 -m venv /app/venv && \
+    /app/venv/bin/pip install --upgrade pip && \
+    /app/venv/bin/pip install --no-cache-dir -r /app/requirements.txt
 
-# ✅ Ensure detect.py is executable
-RUN chmod +x /app/scripts/detect.py
-
-# ✅ Create Python virtual environment
-RUN python3 -m venv /app/venv \
-    && /app/venv/bin/pip install --upgrade pip
-
-# ✅ Install Python dependencies
-RUN /app/venv/bin/pip install --no-cache-dir -r /app/requirements.txt || echo "❌ requirements.txt NOT FOUND!"
-
-# ✅ Debugging: ตรวจสอบว่า Python Virtual Environment ถูกสร้างจริง
+# ตรวจสอบว่า Python Virtual Environment ถูกสร้างจริง
 RUN ls -lah /app/venv/bin/python3 || echo "❌ Python Virtual Environment NOT FOUND!"
 
-# ✅ Switch to non-root user
-USER node
-
-# ✅ Expose the application port
+# เปิดพอร์ต 5000
 EXPOSE 5000
 
-# ✅ Start the application
-CMD ["npm", "start"]
+# รันแอป
+CMD ["sh", "-c", "npm start"]
