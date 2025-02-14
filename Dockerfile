@@ -11,7 +11,6 @@ WORKDIR /app
 RUN chown -R node:node /app
 
 # Switch to non-root user
-USER node
 
 # Copy package files and install dependencies
 COPY --chown=node:node package.json package-lock.json ./
