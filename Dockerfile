@@ -1,39 +1,30 @@
 FROM node:18
 
-# ใช้สิทธิ์ root ชั่วคราว
+# Install system dependencies as root
 USER root
-
-# ติดตั้ง Python และ dependencies
 RUN apt-get update && \
     apt-get install -y python3 python3-pip python3-venv build-essential libpq-dev libgl1-mesa-glx && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# กำหนด working directory
+# Set working directory and ownership
 WORKDIR /app
-
-# ให้สิทธิ์แก่ไฟล์ใน /app
 RUN chown -R node:node /app
 
-# คัดลอก package.json และติดตั้ง dependencies
-COPY package.json package-lock.json ./
-RUN npm install --unsafe-perm
+# Switch to non-root user
+USER node
 
-# คัดลอกโค้ดทั้งหมด
-COPY . .
+# Copy package files and install dependencies
+COPY --chown=node:node package.json package-lock.json ./
+RUN npm install
 
-# สร้าง Python virtual environment และติดตั้ง dependencies
+# Copy the rest of the application
+COPY --chown=node:node . .
+
+# Install Python dependencies in a virtual environment
 RUN python3 -m venv /app/venv && \
     /app/venv/bin/pip install --upgrade pip && \
     /app/venv/bin/pip install --no-cache-dir -r requirements.txt
 
-# กำหนดให้ Railway ใช้ virtual environment ของ Python
-ENV PYTHONPATH /app/venv/bin/python
-
-# เปลี่ยนกลับไปเป็น user ปกติ
-USER node
-
-# กำหนดพอร์ตสำหรับแอปพลิเคชัน
+# Expose port and define the startup command
 EXPOSE 5000
-
-# คำสั่งเริ่มต้น
 CMD ["npm", "start"]
