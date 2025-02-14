@@ -21,7 +21,7 @@ RUN npm install --production
 COPY server.js requirements.txt ./
 COPY config/ /app/config/
 COPY models/ /app/models/
-COPY models/best.pt /app/models/  # ✅ เพิ่มการคัดลอก best.pt
+COPY models/best.pt /app/models/  
 COPY routes/ /app/routes/
 COPY services/ /app/services/
 COPY utils/ /app/utils/
