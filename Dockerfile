@@ -24,7 +24,6 @@ COPY models/ /app/models/
 COPY models/best.pt /app/models/  
 COPY routes/ /app/routes/
 COPY services/ /app/services/
-COPY utils/ /app/utils/
 COPY scripts/ /app/scripts/
 
 # ติดตั้ง Python dependencies (ต้องใช้ root)
