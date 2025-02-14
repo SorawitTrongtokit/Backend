@@ -3,10 +3,13 @@
   "version": "1.0.0",
   "description": "My Railway App",
   "main": "server.js",
+  "type": "module",  // ✅ เพิ่มถ้าใช้ import/export
   "scripts": {
+    "prestart": "npm run build",  // ✅ ติดตั้ง dependencies ก่อนรัน
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "build": "npm install --production"
+    "build": "npm ci --omit=dev",  // ✅ ใช้ npm ci แทน npm install
+    "postinstall": "npm ci --omit=dev"  // ✅ ให้ Railway/Render ใช้
   },
   "dependencies": {
     "dotenv": "^16.0.3",
