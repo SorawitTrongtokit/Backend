@@ -1,48 +1,39 @@
-# ใช้ Node.js 18 เป็น base image
 FROM node:18
 
-# ติดตั้ง Python, pip และ dependencies อื่น ๆ
-RUN apt-get update && \
-    apt-get install -y \
-    python3 python3-pip \
-    build-essential libpq-dev libgl1-mesa-glx && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    ln -s /usr/bin/python3 /usr/bin/python
+# ใช้สิทธิ์ root ชั่วคราว
+USER root
 
-# ตั้งค่าโฟลเดอร์ทำงาน
+# ติดตั้ง Python และ dependencies
+RUN apt-get update && \
+    apt-get install -y python3 python3-pip python3-venv build-essential libpq-dev libgl1-mesa-glx && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# กำหนด working directory
 WORKDIR /app
+
+# เปลี่ยน owner ให้ user node ใช้ /app ได้
+RUN chown -R node:node /app
 
 # คัดลอก package.json และติดตั้ง dependencies
 COPY package.json package-lock.json ./
 RUN npm install --production
 
-# คัดลอกไฟล์ทั้งหมดของโปรเจค
-COPY server.js requirements.txt ./
-COPY config/ /app/config/
-COPY models/ /app/models/
-COPY models/best.pt /app/models/  
-COPY routes/ /app/routes/
-COPY services/ /app/services/
-COPY scripts/ /app/scripts/
+# คัดลอกโค้ดทั้งหมด
+COPY . .
 
-# ติดตั้ง Python dependencies (ต้องใช้ root)
-USER root
-RUN pip3 install --upgrade pip && \
-    pip3 install --no-cache-dir -r requirements.txt
+# สร้าง Python virtual environment และติดตั้ง dependencies
+RUN python3 -m venv /app/venv && \
+    /app/venv/bin/pip install --upgrade pip && \
+    /app/venv/bin/pip install --no-cache-dir -r requirements.txt
 
-# สร้าง Non-root user และตั้งค่าสิทธิ์
-RUN useradd -m appuser && \
-    chown -R appuser:appuser /app && \
-    chmod -R 755 /app && \
-    mkdir -p /app/uploads /app/logs && \
-    chmod 755 /app/uploads /app/logs
+# กำหนดให้ Railway ใช้ virtual environment ของ Python
+ENV PYTHONPATH /app/venv/bin/python
 
-# ใช้ Non-root user
-USER appuser
+# เปลี่ยนกลับไปเป็น user ปกติ
+USER node
 
-# เปิดพอร์ต 5000
+# กำหนดพอร์ตสำหรับแอปพลิเคชัน
 EXPOSE 5000
 
-# รันแอป
+# คำสั่งเริ่มต้น
 CMD ["npm", "start"]
